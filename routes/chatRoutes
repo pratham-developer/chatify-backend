@@ -1,0 +1,46 @@
+// routes/chatRoutes.js
+const express = require('express');
+const Message = require('../models/messageModel');
+const verifyToken = require('../middlewares/authMiddleware');
+const router = express.Router();
+
+
+router.get('/',async (req,res)=>{
+    res.status(200).json({
+        message: "Working"
+    });
+});
+
+// Route to get all previous messages
+router.get('/messages', verifyToken, async (req, res) => {
+    try {
+        const messages = await Message.find().sort({ timestamp: 1 });
+        res.json(messages);
+    } catch (error) {
+        res.status(500).json({ error: 'Failed to fetch messages' });
+    }
+});
+
+// Route to send a new message
+router.post('/messages', verifyToken, async (req, res) => {
+    const { text, senderName } = req.body;
+
+    if (!text || !senderName) {
+        return res.status(400).json({ error: 'Text and senderName are required' });
+    }
+
+    const newMessage = new Message({
+        text,
+        senderId: req.user.uid, // Use the authenticated user's UID
+        senderName,
+    });
+
+    try {
+        await newMessage.save();
+        res.status(201).json(newMessage);
+    } catch (error) {
+        res.status(500).json({ error: 'Failed to save message' });
+    }
+});
+
+module.exports = router;
